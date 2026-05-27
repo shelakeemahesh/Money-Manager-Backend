@@ -74,7 +74,14 @@ public class SecurityConfig {
 
         // Parse comma-separated origins from config property
         List<String> origins = Arrays.asList(allowedOriginsConfig.split(","));
-        config.setAllowedOrigins(origins);
+
+        // When allowCredentials is true, Spring Security does NOT allow literal "*".
+        // Use setAllowedOriginPatterns("*") instead, which permits all origins with credentials.
+        if (origins.size() == 1 && "*".equals(origins.get(0).trim())) {
+            config.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            config.setAllowedOrigins(origins);
+        }
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
