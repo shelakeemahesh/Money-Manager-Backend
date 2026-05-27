@@ -43,8 +43,6 @@ public class User {
     private String phoneNumber;
 
     private Boolean isActive;
-    private String otpCode;
-    private LocalDateTime otpExpiry;
 
     @Enumerated(EnumType.STRING)
     private Role role;

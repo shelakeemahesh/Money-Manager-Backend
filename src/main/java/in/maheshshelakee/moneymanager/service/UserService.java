@@ -9,6 +9,7 @@ import in.maheshshelakee.moneymanager.entity.UserStatus;
 import in.maheshshelakee.moneymanager.repository.CategoryRepository;
 import in.maheshshelakee.moneymanager.repository.UserRepository;
 import in.maheshshelakee.moneymanager.repository.SessionRepository;
+import in.maheshshelakee.moneymanager.repository.OtpVerificationRepository;
 import in.maheshshelakee.moneymanager.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,8 @@ public class UserService {
     private final SessionRepository sessionRepository;
     private final LoginAttemptService loginAttemptService;
     private final OtpAttemptService otpAttemptService;
+    private final OtpVerificationRepository otpVerificationRepository;
+    private final OtpService otpService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -46,30 +49,7 @@ public class UserService {
     @Value("${app.otp-expiration-minutes:5}")
     private int otpExpirationMinutes;
 
-    // Helper to hash token using SHA-256
-    private String hashToken(String token) {
-        if (token == null) return null;
-        try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
 
-    // Helper to generate a 6-digit OTP code
-    private String generateOtp() {
-        SecureRandom random = new SecureRandom();
-        int otp = 100000 + random.nextInt(900000);
-        return String.valueOf(otp);
-    }
 
     // ─── REGISTER ──────────────────────────────────────────────────────────────
     @Transactional
@@ -102,6 +82,9 @@ public class UserService {
         // Create default categories
         createDefaultCategories(newUser);
 
+        // Generate and send OTP via both channels
+        otpService.generateAndSend(newUser, "both");
+
         return toDTO(newUser);
     }
 
@@ -123,28 +106,23 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account is already verified");
         }
 
-        String hashedOtp = hashToken(request.getOtpCode().trim());
-        if (user.getOtpCode() == null || !user.getOtpCode().equals(hashedOtp) ||
-                user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            
+        try {
+            otpService.verifyOtp(user, request.getOtpCode());
+        } catch (ResponseStatusException ex) {
             otpAttemptService.verificationFailed(identifier);
             
             if (otpAttemptService.isVerificationBlocked(identifier)) {
-                user.setOtpCode(null);
-                user.setOtpExpiry(null);
-                userRepository.save(user);
+                // Invalidate any active OTPs for this user
+                otpVerificationRepository.deleteByUser(user);
                 
                 int remaining = otpAttemptService.getRemainingVerificationCooldownMinutes(identifier);
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                         "Too many failed verification attempts. Active OTP has been invalidated. Please try again after " + remaining + " minutes.");
             }
-            
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired OTP code");
+            throw ex;
         }
 
         user.setIsVerified(true);
-        user.setOtpCode(null);
-        user.setOtpExpiry(null);
         userRepository.save(user);
 
         otpAttemptService.verificationSucceeded(identifier);
@@ -169,27 +147,9 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account is already verified");
         }
 
-        String rawOtp = generateOtp();
-        String hashedOtp = hashToken(rawOtp);
-
-        user.setOtpCode(hashedOtp);
-        user.setOtpExpiry(LocalDateTime.now().plusMinutes(otpExpirationMinutes));
-        userRepository.save(user);
+        otpService.generateAndSend(user, channel);
 
         otpAttemptService.recordRequest(identifier);
-
-        String subject = "Verify your Money Manager account";
-        String body = "Hi " + user.getFullName() + ",\n\n"
-                + "Your 6-digit OTP verification code is:\n"
-                + rawOtp + "\n\n"
-                + "This OTP will expire in " + otpExpirationMinutes + " minutes.\n\n"
-                + "– Money Manager Team";
-
-        if ("phone".equalsIgnoreCase(channel)) {
-            smsService.sendSms(user.getPhoneNumber(), "Your Money Manager verification OTP is " + rawOtp);
-        } else {
-            emailService.sendEmail(user.getEmail(), subject, body);
-        }
     }
 
     // ─── LOGIN ─────────────────────────────────────────────────────────────────
@@ -323,30 +283,13 @@ public class UserService {
                     "Too many OTP requests. Please try again after " + remaining + " minutes.");
         }
 
-        userRepository.findByEmailOrPhoneNumber(identifier, identifier)
-                .ifPresent(user -> {
-                    String rawOtp = generateOtp();
-                    String hashedOtp = hashToken(rawOtp);
+        User user = userRepository.findByEmailOrPhoneNumber(identifier, identifier)
+                .orElse(null);
 
-                    user.setOtpCode(hashedOtp);
-                    user.setOtpExpiry(LocalDateTime.now().plusMinutes(otpExpirationMinutes));
-                    userRepository.save(user);
-
-                    otpAttemptService.recordRequest(identifier);
-
-                    String subject = "Reset Password Code";
-                    String body = "Hi " + user.getFullName() + ",\n\n"
-                            + "You requested to reset your Money Manager password.\n\n"
-                            + "Your 6-digit reset OTP code is:\n"
-                            + rawOtp + "\n\n"
-                            + "This OTP will expire in " + otpExpirationMinutes + " minutes.\n\n"
-                            + "– Money Manager Team";
-
-                    emailService.sendEmail(user.getEmail(), subject, body);
-
-                    // Send SMS OTP placeholder
-                    smsService.sendSms(user.getPhoneNumber(), "Your Money Manager password reset OTP is " + rawOtp);
-                });
+        if (user != null) {
+            otpService.generateAndSend(user, "both", "RESET");
+            otpAttemptService.recordRequest(identifier);
+        }
     }
 
     // ─── RESET PASSWORD ────────────────────────────────────────────────────────
@@ -363,28 +306,23 @@ public class UserService {
         User user = userRepository.findByEmailOrPhoneNumber(identifier, identifier)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
 
-        String hashedOtp = hashToken(request.getOtpCode().trim());
-        if (user.getOtpCode() == null || !user.getOtpCode().equals(hashedOtp) ||
-                user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            
+        try {
+            otpService.verifyOtp(user, request.getOtpCode());
+        } catch (ResponseStatusException ex) {
             otpAttemptService.verificationFailed(identifier);
             
             if (otpAttemptService.isVerificationBlocked(identifier)) {
-                user.setOtpCode(null);
-                user.setOtpExpiry(null);
-                userRepository.save(user);
+                // Invalidate any active OTPs for this user
+                otpVerificationRepository.deleteByUser(user);
                 
                 int remaining = otpAttemptService.getRemainingVerificationCooldownMinutes(identifier);
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                         "Too many failed verification attempts. Active OTP has been invalidated. Please try again after " + remaining + " minutes.");
             }
-            
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired OTP code");
+            throw ex;
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setOtpCode(null);
-        user.setOtpExpiry(null);
         userRepository.save(user);
 
         // Delete all active refresh tokens/sessions for the user
