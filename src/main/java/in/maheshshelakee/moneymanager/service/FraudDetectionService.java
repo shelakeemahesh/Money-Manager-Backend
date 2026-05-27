@@ -8,8 +8,8 @@ import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
 import in.maheshshelakee.moneymanager.repository.FraudEventRepository;
 import in.maheshshelakee.moneymanager.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +21,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class FraudDetectionService {
 
@@ -29,6 +28,18 @@ public class FraudDetectionService {
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
+
+    public FraudDetectionService(
+            @Lazy FraudEventRepository fraudEventRepository,
+            @Lazy ExpenseRepository expenseRepository,
+            @Lazy IncomeRepository incomeRepository,
+            @Lazy UserRepository userRepository
+    ) {
+        this.fraudEventRepository = fraudEventRepository;
+        this.expenseRepository = expenseRepository;
+        this.incomeRepository = incomeRepository;
+        this.userRepository = userRepository;
+    }
 
     public List<FraudEventEntity> getAllFlaggedEvents() {
         return fraudEventRepository.findAll();

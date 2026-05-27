@@ -26,7 +26,8 @@ import in.maheshshelakee.moneymanager.repository.UserFeedbackRepository;
 import in.maheshshelakee.moneymanager.repository.FraudEventRepository;
 import in.maheshshelakee.moneymanager.repository.BackupSettingsRepository;
 import in.maheshshelakee.moneymanager.repository.RetentionSettingsRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,7 +38,6 @@ import java.sql.Connection;
 import java.sql.Statement;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
 
@@ -56,6 +56,39 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final BackupSettingsRepository backupSettingsRepository;
     private final RetentionSettingsRepository retentionSettingsRepository;
 
+    public DatabaseSeeder(
+            @Lazy UserRepository userRepository,
+            @Lazy PasswordEncoder passwordEncoder,
+            @Lazy DataSource dataSource,
+            @Lazy AISettingsRepository aiSettingsRepository,
+            @Lazy BudgetRepository budgetRepository,
+            @Lazy SubscriptionPlanRepository planRepository,
+            @Lazy UserSubscriptionRepository userSubscriptionRepository,
+            @Lazy NotificationTemplateRepository templateRepository,
+            @Lazy SupportTicketRepository ticketRepository,
+            @Lazy TicketReplyRepository replyRepository,
+            @Lazy UserFeedbackRepository feedbackRepository,
+            @Lazy FraudEventRepository fraudEventRepository,
+            @Lazy BackupSettingsRepository backupSettingsRepository,
+            @Lazy RetentionSettingsRepository retentionSettingsRepository
+    ) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.dataSource = dataSource;
+        this.aiSettingsRepository = aiSettingsRepository;
+        this.budgetRepository = budgetRepository;
+        this.planRepository = planRepository;
+        this.userSubscriptionRepository = userSubscriptionRepository;
+        this.templateRepository = templateRepository;
+        this.ticketRepository = ticketRepository;
+        this.replyRepository = replyRepository;
+        this.feedbackRepository = feedbackRepository;
+        this.fraudEventRepository = fraudEventRepository;
+        this.backupSettingsRepository = backupSettingsRepository;
+        this.retentionSettingsRepository = retentionSettingsRepository;
+    }
+
+    @Async
     @Override
     public void run(String... args) throws Exception {
         // Self-healing database column alter to support new enum values and clean legacy keys
