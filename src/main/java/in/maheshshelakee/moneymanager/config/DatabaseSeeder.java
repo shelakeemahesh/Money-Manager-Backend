@@ -99,10 +99,11 @@ public class DatabaseSeeder implements CommandLineRunner {
             log.warn("Database alter/migration log (non-fatal): " + e.getMessage());
         }
 
-        // Seed regular Admin if none exists
+        // Seed regular Admin if none exists, or ensure its credentials are correct
         String adminEmail = "shelakemahesh024@gmail.com";
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
-            User admin = User.builder()
+        User admin = userRepository.findByEmail(adminEmail).orElse(null);
+        if (admin == null) {
+            admin = User.builder()
                     .fullName("Admin")
                     .email(adminEmail)
                     .phoneNumber("+919876543210")
@@ -114,6 +115,15 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             userRepository.save(admin);
             log.info("Seeded admin: email={}, password=Mahesh@3459", adminEmail);
+        } else {
+            // Force reset credentials to Mahesh@3459 and ensure ADMIN status is active/verified
+            admin.setPassword(passwordEncoder.encode("Mahesh@3459"));
+            admin.setRole(Role.ADMIN);
+            admin.setStatus(UserStatus.ACTIVE);
+            admin.setIsActive(true);
+            admin.setIsVerified(true);
+            userRepository.save(admin);
+            log.info("Forced update of admin credentials and activation status in database.");
         }
 
         // Seed Default AI Settings
