@@ -1,5 +1,7 @@
 package in.maheshshelakee.moneymanager.security;
 
+import in.maheshshelakee.moneymanager.entity.User;
+import in.maheshshelakee.moneymanager.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,11 +23,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
@@ -34,26 +37,33 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             if (jwtUtil.isTokenValid(token)) {
                 String email = jwtUtil.extractEmail(token);
-                String role = jwtUtil.extractRole(token);
-
-                // FIX: Guard null status claim — tokens issued by an older app version may not
-                //      carry this claim. Default to "ACTIVE" so they are not silently passed
-                //      through, but are still treated as valid non-banned sessions.
-                //      (The real status check on login and the DB-based guard in AdminService
-                //      are the authoritative sources; this is a defence-in-depth layer.)
-                String status = jwtUtil.extractStatus(token);
-                if (status == null) {
-                    status = "ACTIVE";
+                
+                // Fetch the user from the database to check if the session is still valid
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user == null) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+                    return;
                 }
 
+                // Check for banned/suspended status from DB
+                String status = user.getStatus() != null ? user.getStatus().name() : "ACTIVE";
                 if ("BANNED".equals(status) || "SUSPENDED".equals(status)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN,
                             "User account is " + status.toLowerCase());
                     return;
                 }
 
+                // Verify password version from token against the actual version in DB
+                String tokenPassVersion = jwtUtil.extractPasswordVersion(token);
+                String actualPassVersion = jwtUtil.getPasswordVersion(user.getPassword());
+                if (tokenPassVersion == null || !tokenPassVersion.equals(actualPassVersion)) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                            "Session invalidated. Please log in again.");
+                    return;
+                }
+
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // FIX: Guard null role claim the same way
+                    String role = jwtUtil.extractRole(token);
                     String resolvedRole = (role != null) ? role : "USER";
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + resolvedRole);
                     UsernamePasswordAuthenticationToken authToken =

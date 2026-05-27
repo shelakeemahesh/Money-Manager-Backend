@@ -25,4 +25,6 @@ public class CategoryRequest {
 
     @Builder.Default
     private String color = "#6366f1";
+
+    private Boolean globalTemplate;
 }

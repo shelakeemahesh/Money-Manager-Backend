@@ -22,6 +22,8 @@ public class CategoryResponse {
     private String color;
     private long subcategoryCount;
     private List<SubCategoryResponse> subcategories;
+    private Boolean globalTemplate;
+    private Boolean archived;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ProfileDTO {
+public class UserDTO {
 
     private Long id;
 
@@ -29,12 +29,19 @@ public class ProfileDTO {
     @Email(message = "Please provide a valid email address")
     private String email;
 
+    @NotBlank(message = "Phone number is required")
+    private String phoneNumber;
+
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    private String profileImageUrl;
+    @JsonProperty("profileImage")
+    private String profileImage;
+
+    private String role;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -66,15 +66,41 @@ public class JwtUtil {
                 keyBytes.length, expirationMs);
     }
 
-    public String generateToken(String email, String role, String status) {
+    public String generateToken(String email, String role, String status, String passwordVersion) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
                 .claim("status", status)
+                .claim("pv", passwordVersion)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String getPasswordVersion(String passwordHash) {
+        if (passwordHash == null) return "";
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest((passwordHash + secret).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString().substring(0, 16);
+        } catch (Exception e) {
+            return String.valueOf(passwordHash.hashCode());
+        }
+    }
+
+    public String extractPasswordVersion(String token) {
+        try {
+            return extractClaims(token).get("pv", String.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public String extractEmail(String token) {

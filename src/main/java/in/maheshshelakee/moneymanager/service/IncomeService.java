@@ -2,7 +2,7 @@ package in.maheshshelakee.moneymanager.service;
 
 import in.maheshshelakee.moneymanager.dto.IncomeDTO;
 import in.maheshshelakee.moneymanager.entity.IncomeEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,33 +18,33 @@ import java.util.stream.Collectors;
 public class IncomeService {
 
     private final IncomeRepository incomeRepository;
-    private final ProfileService profileService;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public List<IncomeDTO> getAll(String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        return incomeRepository.findByProfileOrderByDateDesc(profile)
+        User user = userService.getUserByEmail(email);
+        return incomeRepository.findByUserOrderByDateDesc(user)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @Transactional
     public IncomeDTO add(IncomeDTO dto, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         IncomeEntity entity = IncomeEntity.builder()
                 .source(dto.getSource().trim())
                 .amount(dto.getAmount())
                 .date(dto.getDate())
                 .category(dto.getCategory())
                 .icon(dto.getIcon() != null && !dto.getIcon().isBlank() ? dto.getIcon() : "💰")
-                .profile(profile)
+                .user(user)
                 .build();
         return toDTO(incomeRepository.save(entity));
     }
 
     @Transactional
     public IncomeDTO update(Long id, IncomeDTO dto, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        IncomeEntity entity = incomeRepository.findByIdAndProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        IncomeEntity entity = incomeRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Income record not found"));
         entity.setSource(dto.getSource().trim());
         entity.setAmount(dto.getAmount());
@@ -58,8 +58,8 @@ public class IncomeService {
 
     @Transactional
     public void delete(Long id, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        IncomeEntity entity = incomeRepository.findByIdAndProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        IncomeEntity entity = incomeRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Income record not found"));
         incomeRepository.delete(entity);
     }

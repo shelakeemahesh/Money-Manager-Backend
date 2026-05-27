@@ -7,7 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_admin_audit_logs")
+@Table(name = "tbl_admin_audit_logs", indexes = {
+        @Index(name = "idx_audit_created_at", columnList = "createdAt")
+})
 @Getter
 @Setter
 @Builder
@@ -21,11 +23,11 @@ public class AdminAuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "admin_id", nullable = false)
-    private ProfileEntity admin;
+    private User admin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_user_id")
-    private ProfileEntity targetUser;
+    private User targetUser;
 
     @Column(nullable = false)
     private String action;

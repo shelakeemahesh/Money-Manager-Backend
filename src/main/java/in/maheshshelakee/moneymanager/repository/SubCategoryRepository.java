@@ -1,7 +1,7 @@
 package in.maheshshelakee.moneymanager.repository;
 
 import in.maheshshelakee.moneymanager.entity.CategoryEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.entity.SubCategoryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,7 +12,7 @@ public interface SubCategoryRepository extends JpaRepository<SubCategoryEntity, 
 
     List<SubCategoryEntity> findByCategoryOrderByCreatedAtDesc(CategoryEntity category);
 
-    Optional<SubCategoryEntity> findByIdAndCategoryProfile(Long id, ProfileEntity profile);
+    Optional<SubCategoryEntity> findByIdAndCategoryUser(Long id, User user);
 
     long countByCategory(CategoryEntity category);
 }

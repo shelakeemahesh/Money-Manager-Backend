@@ -16,7 +16,10 @@ public class AdminUserDto {
     private Long id;
     private String fullName;
     private String email;
+    private String phoneNumber;
     private LocalDateTime createdAt;
     private Boolean isActive;
     private UserStatus status;
+    private in.maheshshelakee.moneymanager.entity.Role role;
+    private Boolean isVerified;
 }

@@ -4,13 +4,14 @@ import in.maheshshelakee.moneymanager.dto.AdminDashboardResponse;
 import in.maheshshelakee.moneymanager.dto.AdminStatsResponse;
 import in.maheshshelakee.moneymanager.dto.AdminUserDto;
 import in.maheshshelakee.moneymanager.entity.AdminAuditLog;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.entity.UserStatus;
 import in.maheshshelakee.moneymanager.exception.ResourceNotFoundException;
 import in.maheshshelakee.moneymanager.repository.AdminAuditLogRepository;
 import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
-import in.maheshshelakee.moneymanager.repository.ProfileRepository;
+import in.maheshshelakee.moneymanager.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,14 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminService {
 
-    private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
     private final AdminAuditLogRepository adminAuditLogRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminDashboardResponse getDashboardStats() {
-        long totalUsers = profileRepository.count();
-        long activeUsers = profileRepository.countByStatus(UserStatus.ACTIVE);
+        long totalUsers = userRepository.count();
+        long activeUsers = userRepository.countByStatus(UserStatus.ACTIVE);
         double totalIncome = incomeRepository.sumAllIncomes();
         double totalExpense = expenseRepository.sumAllExpenses();
 
@@ -43,12 +45,64 @@ public class AdminService {
     }
 
     public Page<AdminUserDto> getAllUsers(Pageable pageable) {
-        return profileRepository.findAll(pageable)
+        return userRepository.findAll(pageable)
                 .map(this::toDto);
     }
 
+    public in.maheshshelakee.moneymanager.dto.PaginatedUsersResponse getAllUsersFiltered(
+            int page, int size, String search, String roleStr, String statusStr) {
+        in.maheshshelakee.moneymanager.entity.Role role = null;
+        if (roleStr != null && !roleStr.isBlank() && !"ALL".equalsIgnoreCase(roleStr)) {
+            role = in.maheshshelakee.moneymanager.entity.Role.valueOf(roleStr.toUpperCase());
+        }
+        UserStatus status = null;
+        if (statusStr != null && !statusStr.isBlank() && !"ALL".equalsIgnoreCase(statusStr)) {
+            status = UserStatus.valueOf(statusStr.toUpperCase());
+        }
+        String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<User> pageResult = userRepository.findAllFiltered(cleanSearch, role, status, pageable);
+
+        java.util.List<AdminUserDto> dtoList = pageResult.getContent().stream()
+                .map(this::toDto)
+                .collect(java.util.stream.Collectors.toList());
+
+        return in.maheshshelakee.moneymanager.dto.PaginatedUsersResponse.builder()
+                .users(dtoList)
+                .totalCount(pageResult.getTotalElements())
+                .page(page)
+                .pageSize(size)
+                .build();
+    }
+
+    @Transactional
+    public AdminUserDto updateUserRole(Long userId, in.maheshshelakee.moneymanager.entity.Role newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setRole(newRole);
+        userRepository.save(user);
+        return toDto(user);
+    }
+
+    @Transactional
+    public AdminUserDto toggleUserVerification(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setIsVerified(user.getIsVerified() == null ? true : !user.getIsVerified());
+        userRepository.save(user);
+        return toDto(user);
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        userRepository.delete(user);
+    }
+
     public AdminUserDto getUserById(Long id) {
-        ProfileEntity user = profileRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         return toDto(user);
     }
@@ -59,20 +113,20 @@ public class AdminService {
      */
     public AdminStatsResponse getSystemStats() {
         return AdminStatsResponse.builder()
-                .totalUsers(profileRepository.count())
-                .activeUsers(profileRepository.countByStatus(UserStatus.ACTIVE))
-                .suspendedUsers(profileRepository.countByStatus(UserStatus.SUSPENDED))
-                .bannedUsers(profileRepository.countByStatus(UserStatus.BANNED))
+                .totalUsers(userRepository.count())
+                .activeUsers(userRepository.countByStatus(UserStatus.ACTIVE))
+                .suspendedUsers(userRepository.countByStatus(UserStatus.SUSPENDED))
+                .bannedUsers(userRepository.countByStatus(UserStatus.BANNED))
                 .build();
     }
 
     @Transactional
     public AdminUserDto updateUserStatus(Long userId, UserStatus newStatus, String reason,
                                          String adminEmail, String ipAddress) {
-        ProfileEntity admin = profileRepository.findByEmail(adminEmail)
+        User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
 
-        ProfileEntity targetUser = profileRepository.findById(userId)
+        User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         UserStatus oldStatus = targetUser.getStatus();
@@ -84,7 +138,7 @@ public class AdminService {
             targetUser.setIsActive(true);
         }
 
-        profileRepository.save(targetUser);
+        userRepository.save(targetUser);
 
         AdminAuditLog logEntry = AdminAuditLog.builder()
                 .admin(admin)
@@ -99,18 +153,38 @@ public class AdminService {
 
         log.info("Admin {} changed status of user {} from {} to {}",
                 adminEmail, targetUser.getEmail(), oldStatus, newStatus);
-
+ 
         return toDto(targetUser);
     }
-
-    private AdminUserDto toDto(ProfileEntity entity) {
+ 
+    @Transactional
+    public void resetUserPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+ 
+    @Transactional
+    public AdminUserDto toggleUserActive(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setIsActive(user.getIsActive() == null ? true : !user.getIsActive());
+        userRepository.save(user);
+        return toDto(user);
+    }
+ 
+    private AdminUserDto toDto(User entity) {
         return AdminUserDto.builder()
                 .id(entity.getId())
                 .fullName(entity.getFullName())
                 .email(entity.getEmail())
+                .phoneNumber(entity.getPhoneNumber())
                 .createdAt(entity.getCreatedAt())
                 .isActive(entity.getIsActive())
                 .status(entity.getStatus())
+                .role(entity.getRole())
+                .isVerified(entity.getIsVerified())
                 .build();
     }
 }

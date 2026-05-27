@@ -8,13 +8,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_profiles")
+@Table(name = "tbl_users", indexes = {
+        @Index(name = "idx_user_phone_number", columnList = "phone_number")
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProfileEntity {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +28,9 @@ public class ProfileEntity {
     private String email;
 
     private String password;
-    private String profileImageUrl;
+    
+    @Column(name = "profile_image")
+    private String profileImage;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -35,8 +39,12 @@ public class ProfileEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
+
     private Boolean isActive;
-    private String activationToken;
+    private String otpCode;
+    private LocalDateTime otpExpiry;
 
     @Enumerated(EnumType.STRING)
     private Role role;
@@ -44,10 +52,15 @@ public class ProfileEntity {
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
+    private Boolean isVerified;
+    
+    private LocalDateTime lastLogin;
+
     @PrePersist
     void prePersist() {
         if (isActive == null) isActive = false;
         if (role == null) role = Role.USER;
         if (status == null) status = UserStatus.ACTIVE;
+        if (isVerified == null) isVerified = false;
     }
 }

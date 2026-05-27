@@ -3,7 +3,7 @@ package in.maheshshelakee.moneymanager.service;
 import in.maheshshelakee.moneymanager.dto.SubCategoryRequest;
 import in.maheshshelakee.moneymanager.dto.SubCategoryResponse;
 import in.maheshshelakee.moneymanager.entity.CategoryEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.entity.SubCategoryEntity;
 import in.maheshshelakee.moneymanager.repository.SubCategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class SubCategoryService {
 
     private final SubCategoryRepository subCategoryRepository;
     private final CategoryService categoryService;
-    private final ProfileService profileService;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public List<SubCategoryResponse> getByCategoryId(Long categoryId, String email) {
@@ -43,8 +43,8 @@ public class SubCategoryService {
 
     @Transactional
     public void delete(Long id, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        SubCategoryEntity entity = subCategoryRepository.findByIdAndCategoryProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        SubCategoryEntity entity = subCategoryRepository.findByIdAndCategoryUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subcategory not found"));
         subCategoryRepository.delete(entity);
     }

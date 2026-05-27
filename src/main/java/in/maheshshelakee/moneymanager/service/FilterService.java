@@ -1,7 +1,7 @@
 package in.maheshshelakee.moneymanager.service;
 
 import in.maheshshelakee.moneymanager.dto.FilterResultDTO;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,19 +21,19 @@ public class FilterService {
 
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
-    private final ProfileService profileService;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public List<FilterResultDTO> filter(String email, String type, LocalDate startDate, LocalDate endDate,
             String sortField, String sortOrder, String search) {
 
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         List<FilterResultDTO> results;
 
         if ("Income".equalsIgnoreCase(type)) {
             var incomes = (startDate != null && endDate != null)
-                    ? incomeRepository.findByProfileAndDateBetweenOrderByDateDesc(profile, startDate, endDate)
-                    : incomeRepository.findByProfileOrderByDateDesc(profile);
+                    ? incomeRepository.findByUserAndDateBetweenOrderByDateDesc(user, startDate, endDate)
+                    : incomeRepository.findByUserOrderByDateDesc(user);
 
             results = incomes.stream()
                     .map(i -> FilterResultDTO.builder()
@@ -48,9 +48,9 @@ public class FilterService {
 
         } else if ("Expense".equalsIgnoreCase(type)) {
             var expenses = (startDate != null && endDate != null)
-                    ? expenseRepository.findByProfileAndExpenseDateBetweenOrderByExpenseDateDesc(
-                            profile, startDate, endDate)
-                    : expenseRepository.findByProfileOrderByExpenseDateDesc(profile);
+                    ? expenseRepository.findByUserAndExpenseDateBetweenOrderByExpenseDateDesc(
+                            user, startDate, endDate)
+                    : expenseRepository.findByUserOrderByExpenseDateDesc(user);
 
             results = expenses.stream()
                     .map(e -> FilterResultDTO.builder()

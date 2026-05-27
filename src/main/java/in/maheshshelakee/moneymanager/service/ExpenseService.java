@@ -3,7 +3,7 @@ package in.maheshshelakee.moneymanager.service;
 import in.maheshshelakee.moneymanager.dto.ExpenseRequest;
 import in.maheshshelakee.moneymanager.dto.ExpenseResponse;
 import in.maheshshelakee.moneymanager.entity.ExpenseEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.exception.ResourceNotFoundException;
 import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,12 @@ import java.util.stream.Collectors;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
-    private final ProfileService profileService;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public List<ExpenseResponse> getAll(String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        return expenseRepository.findByProfileOrderByExpenseDateDesc(profile)
+        User user = userService.getUserByEmail(email);
+        return expenseRepository.findByUserOrderByExpenseDateDesc(user)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -32,15 +32,15 @@ public class ExpenseService {
 
     @Transactional(readOnly = true)
     public ExpenseResponse getById(Long id, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        ExpenseEntity entity = expenseRepository.findByIdAndProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        ExpenseEntity entity = expenseRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", id));
         return toResponse(entity);
     }
 
     @Transactional
     public ExpenseResponse add(ExpenseRequest request, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         ExpenseEntity entity = ExpenseEntity.builder()
                 .title(request.getTitle().trim())
                 .amount(request.getAmount())
@@ -49,15 +49,15 @@ public class ExpenseService {
                 .expenseDate(request.getExpenseDate())
                 .paymentMethod(request.getPaymentMethod().toUpperCase())
                 .icon(resolveIcon(request.getIcon()))
-                .profile(profile)
+                .user(user)
                 .build();
         return toResponse(expenseRepository.save(entity));
     }
 
     @Transactional
     public ExpenseResponse update(Long id, ExpenseRequest request, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        ExpenseEntity entity = expenseRepository.findByIdAndProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        ExpenseEntity entity = expenseRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", id));
 
         entity.setTitle(request.getTitle().trim());
@@ -74,17 +74,17 @@ public class ExpenseService {
 
     @Transactional
     public void delete(Long id, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
-        ExpenseEntity entity = expenseRepository.findByIdAndProfile(id, profile)
+        User user = userService.getUserByEmail(email);
+        ExpenseEntity entity = expenseRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense", id));
         expenseRepository.delete(entity);
     }
 
     @Transactional(readOnly = true)
     public List<ExpenseResponse> getByCategory(String category, String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         return expenseRepository
-                .findByProfileAndCategoryIgnoreCaseOrderByExpenseDateDesc(profile, category)
+                .findByUserAndCategoryIgnoreCaseOrderByExpenseDateDesc(user, category)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -95,9 +95,9 @@ public class ExpenseService {
         if (startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("startDate must not be after endDate");
         }
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         return expenseRepository
-                .findByProfileAndExpenseDateBetweenOrderByExpenseDateDesc(profile, startDate, endDate)
+                .findByUserAndExpenseDateBetweenOrderByExpenseDateDesc(user, startDate, endDate)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -105,10 +105,10 @@ public class ExpenseService {
 
     @Transactional(readOnly = true)
     public Double getTotalAmount(String email) {
-        ProfileEntity profile = profileService.getProfileByEmail(email);
+        User user = userService.getUserByEmail(email);
         // FIX: Removed the redundant null-check. The JPQL query already uses COALESCE which
         //      guarantees a non-null result. One authoritative null-guard is cleaner than two.
-        return expenseRepository.sumAmountByProfile(profile);
+        return expenseRepository.sumAmountByUser(user);
     }
 
     public ExpenseResponse toResponse(ExpenseEntity entity) {

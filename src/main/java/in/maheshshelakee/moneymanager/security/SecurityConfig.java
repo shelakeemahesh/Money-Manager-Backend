@@ -47,11 +47,16 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/register",
                                 "/login",
-                                "/activate",
+                                "/verify-otp",
+                                "/resend-otp",
+                                "/refresh-token",
                                 "/forgot-password",
+                                "/reset-password",
                                 "/status",
-                                "/health")
+                                "/health",
+                                "/ws-support/**")
                         .permitAll()
+                        .requestMatchers("/admin/support/**").hasAnyRole("ADMIN", "SUPPORT")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

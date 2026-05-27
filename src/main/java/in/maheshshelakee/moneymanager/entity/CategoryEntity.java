@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "tbl_categories", uniqueConstraints = @UniqueConstraint(columnNames = {"name", "type", "profile_id"}))
+@Table(name = "tbl_categories", uniqueConstraints = @UniqueConstraint(columnNames = {"name", "type", "user_id"}))
 @Getter
 @Setter
 @Builder
@@ -41,8 +41,14 @@ public class CategoryEntity {
     private List<SubCategoryEntity> subcategories = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", nullable = false)
-    private ProfileEntity profile;
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
+
+    @Builder.Default
+    private Boolean globalTemplate = false;
+
+    @Builder.Default
+    private Boolean archived = false;
 
     @CreationTimestamp
     @Column(updatable = false)

@@ -21,6 +21,7 @@ public class EmailService {
 
     public void sendEmail(String to, String subject, String body) {
         try {
+            log.info("Sending email to {}. Subject: {}\nBody:\n{}", to, subject, body);
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(to);
@@ -29,7 +30,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("Email sent to {}", to);
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage(), e);
+            log.error("Failed to send email to {}: {}", to, e.getMessage());
         }
     }
 }

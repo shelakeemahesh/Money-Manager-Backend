@@ -4,9 +4,9 @@ import in.maheshshelakee.moneymanager.dto.CategoryRequest;
 import in.maheshshelakee.moneymanager.dto.CategoryResponse;
 import in.maheshshelakee.moneymanager.dto.SubCategoryResponse;
 import in.maheshshelakee.moneymanager.entity.CategoryEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.repository.CategoryRepository;
-import in.maheshshelakee.moneymanager.repository.ProfileRepository;
+import in.maheshshelakee.moneymanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
 
     // ─── READ ──────────────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAll(String email) {
-        ProfileEntity profile = getProfile(email);
-        return categoryRepository.findByProfileWithSubcategories(profile)
+        User user = getUser(email);
+        return categoryRepository.findActiveByUserOrGlobal(user)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -37,13 +37,13 @@ public class CategoryService {
     // ─── CREATE ─────────────────────────────────────────────────────────────────
     @Transactional
     public CategoryResponse create(CategoryRequest request, String email) {
-        ProfileEntity profile = getProfile(email);
+        User user = getUser(email);
         String normalizedType = request.getType().toUpperCase();
 
-        if (categoryRepository.existsByNameAndTypeAndProfile(
+        if (categoryRepository.existsByNameAndTypeAndUser(
                 request.getName().trim(),
                 normalizedType,
-                profile)) {
+                user)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Category '" + request.getName() + "' already exists for type " + normalizedType);
         }
@@ -55,7 +55,7 @@ public class CategoryService {
                         ? request.getIcon() : "📁")
                 .color(request.getColor() != null && !request.getColor().isBlank()
                         ? request.getColor() : "#6366f1")
-                .profile(profile)
+                .user(user)
                 .build();
 
         return toResponse(categoryRepository.save(entity));
@@ -64,9 +64,9 @@ public class CategoryService {
     // ─── UPDATE ─────────────────────────────────────────────────────────────────
     @Transactional
     public CategoryResponse update(Long id, CategoryRequest request, String email) {
-        ProfileEntity profile = getProfile(email);
+        User user = getUser(email);
 
-        CategoryEntity entity = categoryRepository.findByIdAndProfile(id, profile)
+        CategoryEntity entity = categoryRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
         String normalizedType = request.getType().toUpperCase();
@@ -75,10 +75,10 @@ public class CategoryService {
                 !entity.getName().equalsIgnoreCase(request.getName().trim()) ||
                         !entity.getType().equalsIgnoreCase(normalizedType);
 
-        if (nameChanged && categoryRepository.existsByNameAndTypeAndProfile(
+        if (nameChanged && categoryRepository.existsByNameAndTypeAndUser(
                 request.getName().trim(),
                 normalizedType,
-                profile)) {
+                user)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Category '" + request.getName() + "' already exists for type " + normalizedType);
         }
@@ -100,9 +100,9 @@ public class CategoryService {
     // ─── DELETE ─────────────────────────────────────────────────────────────────
     @Transactional
     public void delete(Long id, String email) {
-        ProfileEntity profile = getProfile(email);
+        User user = getUser(email);
 
-        CategoryEntity entity = categoryRepository.findByIdAndProfile(id, profile)
+        CategoryEntity entity = categoryRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
         categoryRepository.delete(entity);
@@ -110,7 +110,7 @@ public class CategoryService {
 
     // ─── DEFAULT CATEGORIES ─────────────────────────────────────────────────────
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void createDefaults(ProfileEntity profile) {
+    public void createDefaults(User user) {
 
         List<Object[]> defaults = List.of(
                 new Object[] { "Salary",        "INCOME",  "💼", "#22c55e" },
@@ -133,7 +133,7 @@ public class CategoryService {
                         .type((String) row[1])
                         .icon((String) row[2])
                         .color((String) row[3])
-                        .profile(profile)
+                        .user(user)
                         .build())
                 .collect(Collectors.toList());
 
@@ -141,8 +141,8 @@ public class CategoryService {
     }
 
     // ─── HELPERS ────────────────────────────────────────────────────────────────
-    private ProfileEntity getProfile(String email) {
-        return profileRepository.findByEmail(email)
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
     }
@@ -169,6 +169,8 @@ public class CategoryService {
                 .color(entity.getColor())
                 .subcategoryCount(subs.size())
                 .subcategories(subs)
+                .globalTemplate(entity.getGlobalTemplate())
+                .archived(entity.getArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
@@ -176,9 +178,9 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public CategoryEntity getCategoryByIdAndEmail(Long id, String email) {
-        ProfileEntity profile = getProfile(email);
+        User user = getUser(email);
 
-        return categoryRepository.findByIdAndProfile(id, profile)
+        return categoryRepository.findByIdAndUser(id, user)
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }

@@ -9,7 +9,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_incomes")
+@Table(name = "tbl_incomes", indexes = {
+        @Index(name = "idx_income_profile_date", columnList = "user_id, date")
+})
 @Getter
 @Setter
 @Builder
@@ -31,9 +33,12 @@ public class IncomeEntity {
     private String category;
     private String icon;
 
+    @Builder.Default
+    private Boolean flagged = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", nullable = false)
-    private ProfileEntity profile;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @CreationTimestamp
     @Column(updatable = false)

@@ -1,7 +1,7 @@
 package in.maheshshelakee.moneymanager.repository;
 
 import in.maheshshelakee.moneymanager.entity.CategoryEntity;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,12 +11,23 @@ import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> {
 
-    @Query("SELECT c FROM CategoryEntity c LEFT JOIN FETCH c.subcategories WHERE c.profile = :profile ORDER BY c.createdAt DESC")
-    List<CategoryEntity> findByProfileWithSubcategories(@Param("profile") ProfileEntity profile);
+    @Query("SELECT c FROM CategoryEntity c LEFT JOIN FETCH c.subcategories WHERE c.user = :user ORDER BY c.createdAt DESC")
+    List<CategoryEntity> findByUserWithSubcategories(@Param("user") User user);
 
-    Optional<CategoryEntity> findByIdAndProfile(Long id, ProfileEntity profile);
+    @Query("SELECT c FROM CategoryEntity c LEFT JOIN FETCH c.subcategories " +
+           "WHERE (c.user = :user OR (c.user IS NULL AND c.globalTemplate = true)) " +
+           "AND (c.archived = false OR c.archived IS NULL) " +
+           "ORDER BY c.createdAt DESC")
+    List<CategoryEntity> findActiveByUserOrGlobal(@Param("user") User user);
 
-    boolean existsByNameAndTypeAndProfile(String name, String type, ProfileEntity profile);
+    @Query("SELECT c FROM CategoryEntity c LEFT JOIN FETCH c.subcategories " +
+           "WHERE c.user IS NULL AND (c.archived = false OR c.archived IS NULL) " +
+           "ORDER BY c.createdAt DESC")
+    List<CategoryEntity> findActiveGlobals();
 
-    long countByProfile(ProfileEntity profile);
+    Optional<CategoryEntity> findByIdAndUser(Long id, User user);
+
+    boolean existsByNameAndTypeAndUser(String name, String type, User user);
+
+    long countByUser(User user);
 }

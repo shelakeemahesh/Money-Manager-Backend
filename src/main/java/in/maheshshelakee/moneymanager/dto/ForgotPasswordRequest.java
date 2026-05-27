@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ForgotPasswordRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Must be a valid email address")
+    @NotBlank(message = "Email or Phone Number is required")
     private String email;
 }

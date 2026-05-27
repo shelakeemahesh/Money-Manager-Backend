@@ -2,9 +2,9 @@ package in.maheshshelakee.moneymanager.service;
 
 import in.maheshshelakee.moneymanager.dto.AdminAuditLogDto;
 import in.maheshshelakee.moneymanager.entity.AdminAuditLog;
-import in.maheshshelakee.moneymanager.entity.ProfileEntity;
+import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.repository.AdminAuditLogRepository;
-import in.maheshshelakee.moneymanager.repository.ProfileRepository;
+import in.maheshshelakee.moneymanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class AdminAuditService {
 
     private final AdminAuditLogRepository adminAuditLogRepository;
-    private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
 
     /**
      * Returns paginated audit logs, converted to DTOs to avoid
@@ -40,9 +40,9 @@ public class AdminAuditService {
     @Async
     public void logAction(String adminEmail, Long targetUserId, String action, String details, String ipAddress) {
         try {
-            ProfileEntity admin = profileRepository.findByEmail(adminEmail).orElse(null);
-            ProfileEntity targetUser = targetUserId != null
-                    ? profileRepository.findById(targetUserId).orElse(null)
+            User admin = userRepository.findByEmail(adminEmail).orElse(null);
+            User targetUser = targetUserId != null
+                    ? userRepository.findById(targetUserId).orElse(null)
                     : null;
 
             if (admin == null) {
