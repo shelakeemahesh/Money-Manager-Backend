@@ -115,6 +115,44 @@ public class OtpService {
         otpRepo.save(otp);
     }
 
+    @Transactional
+    public void generateAndSendOtp(User user, String deliveryType) {
+        // Cooldown guard — check if there is an active (unused and unexpired) OTP
+        java.util.Optional<OtpVerification> existing = otpRepo
+                .findByUserAndIsUsedFalseAndExpiresAtAfter(user, LocalDateTime.now());
+
+        if (existing.isPresent()) {
+            log.warn("OTP already active for user {}. Skipping.", user.getEmail());
+            return;
+        }
+
+        // Generate ONE OTP
+        String rawOtp = String.format("%06d", new SecureRandom().nextInt(1000000));
+        String hashedOtp = hashToken(rawOtp);
+
+        // Save to DB
+        OtpVerification otp = OtpVerification.builder()
+                .user(user)
+                .otpCode(hashedOtp)
+                .deliveryType(deliveryType.toUpperCase())
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .isUsed(false)
+                .build();
+        otpRepo.save(otp);
+
+        // Send to ONLY chosen channel
+        String subject = "Verify your Money Manager account";
+        String body = "Your OTP is: " + rawOtp + "\nExpires in 10 minutes.";
+
+        if ("EMAIL".equalsIgnoreCase(deliveryType)) {
+            log.info("Sending OTP via EMAIL to {}", user.getEmail());
+            emailService.sendEmail(user.getEmail(), subject, body);
+        } else if ("SMS".equalsIgnoreCase(deliveryType)) {
+            log.info("Sending OTP via SMS to {}", user.getPhoneNumber());
+            smsService.sendSms(user.getPhoneNumber(), "Your Money Manager OTP is " + rawOtp);
+        }
+    }
+
     private String hashToken(String token) {
         if (token == null) return null;
         try {

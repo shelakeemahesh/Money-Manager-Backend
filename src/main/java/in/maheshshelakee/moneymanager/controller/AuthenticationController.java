@@ -24,7 +24,13 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse<UserDTO>> registerProfile(@Valid @RequestBody UserDTO userDTO) {
         UserDTO registered = userService.registerUser(userDTO);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(registered, "Registration successful. Please check your email/phone for the OTP."));
+                .body(ApiResponse.success(registered, "Registration successful. Please choose your OTP verification method."));
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<Map<String, String>>> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        userService.sendOtp(request);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("message", "OTP sent successfully!")));
     }
 
     @PostMapping("/login")

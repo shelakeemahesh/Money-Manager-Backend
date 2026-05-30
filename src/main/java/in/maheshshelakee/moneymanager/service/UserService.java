@@ -82,9 +82,6 @@ public class UserService {
         // Create default categories
         createDefaultCategories(newUser);
 
-        // Generate and send OTP via both channels
-        otpService.generateAndSend(newUser, "both");
-
         return toDTO(newUser);
     }
 
@@ -150,6 +147,24 @@ public class UserService {
         otpService.generateAndSend(user, channel);
 
         otpAttemptService.recordRequest(identifier);
+    }
+
+    // ─── SEND OTP (NEW SINGLE CHANNEL FLOW) ─────────────────────────────────────
+    @Transactional
+    public void sendOtp(SendOtpRequest request) {
+        if (!"EMAIL".equalsIgnoreCase(request.getDeliveryType()) &&
+                !"SMS".equalsIgnoreCase(request.getDeliveryType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deliveryType must be EMAIL or SMS");
+        }
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
+
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account is already verified");
+        }
+
+        otpService.generateAndSendOtp(user, request.getDeliveryType());
     }
 
     // ─── LOGIN ─────────────────────────────────────────────────────────────────

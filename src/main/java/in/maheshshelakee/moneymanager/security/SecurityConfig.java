@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/register",
+                                "/send-otp",
                                 "/login",
                                 "/verify-otp",
                                 "/resend-otp",

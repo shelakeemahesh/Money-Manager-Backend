@@ -13,6 +13,8 @@ public interface OtpVerificationRepository extends JpaRepository<OtpVerification
 
     Optional<OtpVerification> findByUserAndOtpCodeAndIsUsedFalse(User user, String otpCode);
 
+    Optional<OtpVerification> findByUserAndIsUsedFalseAndExpiresAtAfter(User user, LocalDateTime expiresAt);
+
     void deleteByUser(User user);
 
     long countByUserAndCreatedAtAfter(User user, LocalDateTime since);
