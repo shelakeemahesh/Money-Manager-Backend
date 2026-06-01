@@ -14,6 +14,11 @@ RUN ./mvnw clean package -DskipTests -q
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# Install postgresql-client and default-mysql-client for database backups/restores
+RUN apt-get update && \
+    apt-get install -y postgresql-client default-mysql-client && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy only the built jar from the builder stage
 COPY --from=builder /build/target/moneymanager-0.0.1-SNAPSHOT.jar app.jar
 
