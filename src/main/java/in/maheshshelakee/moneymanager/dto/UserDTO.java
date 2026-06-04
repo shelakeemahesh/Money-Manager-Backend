@@ -37,7 +37,7 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    @JsonProperty("profileImage")
+    @JsonProperty("profileImageUrl")
     private String profileImage;
 
     private String role;

@@ -125,6 +125,35 @@ public class DatabaseSeeder implements CommandLineRunner {
                 } catch (Exception ex) {
                     log.warn("Drop legacy admin_id FK constraint failed: " + ex.getMessage());
                 }
+                try {
+                    stmt.execute("ALTER TABLE tbl_admin_audit_logs DROP CONSTRAINT IF EXISTS fk74r82pf5v58isk5efj5d0u67k");
+                } catch (Exception ex) {
+                    log.warn("Drop legacy admin_id profile FK constraint failed: " + ex.getMessage());
+                }
+                try {
+                    stmt.execute("ALTER TABLE tbl_expenses DROP CONSTRAINT IF EXISTS fkb9dn15oqmjwntdh96pvgsls6l");
+                    stmt.execute("ALTER TABLE tbl_expenses DROP COLUMN IF EXISTS profile_id");
+                } catch (Exception ex) {
+                    log.warn("Clean tbl_expenses legacy profile_id failed: " + ex.getMessage());
+                }
+                try {
+                    stmt.execute("ALTER TABLE tbl_incomes DROP CONSTRAINT IF EXISTS fkoe2tb8guovgwn0goavk5xmep0");
+                    stmt.execute("ALTER TABLE tbl_incomes DROP COLUMN IF EXISTS profile_id");
+                } catch (Exception ex) {
+                    log.warn("Clean tbl_incomes legacy profile_id failed: " + ex.getMessage());
+                }
+                try {
+                    stmt.execute("ALTER TABLE tbl_categories DROP CONSTRAINT IF EXISTS fkriip3m5423be58jfm33c0q8qb");
+                    stmt.execute("ALTER TABLE tbl_categories DROP CONSTRAINT IF EXISTS ukpv5mcfe0s23yqkm63migdfwo2");
+                    stmt.execute("ALTER TABLE tbl_categories DROP COLUMN IF EXISTS profile_id");
+                } catch (Exception ex) {
+                    log.warn("Clean tbl_categories legacy profile_id failed: " + ex.getMessage());
+                }
+                try {
+                    stmt.execute("DROP TABLE IF EXISTS tbl_profiles");
+                } catch (Exception ex) {
+                    log.warn("Drop tbl_profiles failed: " + ex.getMessage());
+                }
             }
             stmt.execute("UPDATE tbl_users SET role = 'ADMIN' WHERE role = 'SUPERADMIN'");
             log.info("Successfully relaxed tbl_users column constraints, dropped legacy FKs, and migrated SUPERADMIN to ADMIN.");
