@@ -6,10 +6,7 @@ import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.entity.SessionEntity;
 import in.maheshshelakee.moneymanager.entity.Role;
 import in.maheshshelakee.moneymanager.entity.UserStatus;
-import in.maheshshelakee.moneymanager.repository.CategoryRepository;
-import in.maheshshelakee.moneymanager.repository.UserRepository;
-import in.maheshshelakee.moneymanager.repository.SessionRepository;
-import in.maheshshelakee.moneymanager.repository.OtpVerificationRepository;
+import in.maheshshelakee.moneymanager.repository.*;
 import in.maheshshelakee.moneymanager.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +30,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final ExpenseRepository expenseRepository;
+    private final IncomeRepository incomeRepository;
+    private final BudgetRepository budgetRepository;
     private final EmailService emailService;
     private final SmsService smsService;
     private final PasswordEncoder passwordEncoder;
@@ -397,6 +397,22 @@ public class UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    @Transactional
+    public void wipeUserData(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        log.info("Wiping transaction logs, custom categories, and budgets for user: {}", email);
+
+        expenseRepository.deleteByUser(user);
+        incomeRepository.deleteByUser(user);
+        budgetRepository.deleteByUser(user);
+        categoryRepository.deleteByUser(user);
+
+        // Re-create default categories
+        createDefaultCategories(user);
     }
 
     public UserDTO toDTO(User entity) {

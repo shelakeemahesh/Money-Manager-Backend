@@ -115,4 +115,10 @@ public class AuthenticationController {
         UserDTO updated = userService.updateProfile(principal.getName(), request);
         return ResponseEntity.ok(ApiResponse.success(updated, "Profile updated successfully!"));
     }
+
+    @PostMapping("/profile/wipe-data")
+    public ResponseEntity<ApiResponse<Void>> wipeUserData(Principal principal) {
+        userService.wipeUserData(principal.getName());
+        return ResponseEntity.ok(ApiResponse.success(null, "User transactional data wiped successfully!"));
+    }
 }

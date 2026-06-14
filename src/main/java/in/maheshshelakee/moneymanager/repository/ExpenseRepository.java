@@ -28,8 +28,10 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM ExpenseEntity e WHERE e.user = :user")
     Double sumAmountByUser(@Param("user") User user);
 
+    List<ExpenseEntity> findByExpenseDateBetweenOrderByExpenseDateDesc(LocalDate startDate, LocalDate endDate);
+
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM ExpenseEntity e")
     Double sumAllExpenses();
 
-    List<ExpenseEntity> findByExpenseDateBetweenOrderByExpenseDateDesc(LocalDate startDate, LocalDate endDate);
+    void deleteByUser(User user);
 }

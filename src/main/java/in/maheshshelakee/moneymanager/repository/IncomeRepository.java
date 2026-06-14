@@ -26,4 +26,6 @@ public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
     Double sumAmountByUser(@Param("user") User user);
 
     List<IncomeEntity> findByDateBetweenOrderByDateDesc(LocalDate startDate, LocalDate endDate);
+
+    void deleteByUser(User user);
 }

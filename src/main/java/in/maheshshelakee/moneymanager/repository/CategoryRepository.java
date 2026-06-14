@@ -30,4 +30,6 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> 
     boolean existsByNameAndTypeAndUser(String name, String type, User user);
 
     long countByUser(User user);
+
+    void deleteByUser(User user);
 }
