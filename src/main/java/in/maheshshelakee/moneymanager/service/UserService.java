@@ -49,9 +49,6 @@ public class UserService {
     @Value("${app.otp-expiration-minutes:5}")
     private int otpExpirationMinutes;
 
-
-
-    // ─── REGISTER ──────────────────────────────────────────────────────────────
     @Transactional
     public UserDTO registerUser(UserDTO userDTO) {
         String email = userDTO.getEmail().trim().toLowerCase();
@@ -79,13 +76,11 @@ public class UserService {
 
         newUser = userRepository.save(newUser);
 
-        // Create default categories
         createDefaultCategories(newUser);
 
         return toDTO(newUser);
     }
 
-    // ─── VERIFY OTP ─────────────────────────────────────────────────────────────
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public void verifyOtp(VerifyOtpRequest request) {
         String identifier = request.getEmailOrPhone().trim();
@@ -109,7 +104,6 @@ public class UserService {
             otpAttemptService.verificationFailed(identifier);
             
             if (otpAttemptService.isVerificationBlocked(identifier)) {
-                // Invalidate any active OTPs for this user
                 otpVerificationRepository.deleteByUser(user);
                 
                 int remaining = otpAttemptService.getRemainingVerificationCooldownMinutes(identifier);
@@ -125,11 +119,10 @@ public class UserService {
         otpAttemptService.verificationSucceeded(identifier);
     }
 
-    // ─── RESEND OTP ─────────────────────────────────────────────────────────────
     @Transactional
     public void resendOtp(ResendOtpRequest request) {
         String identifier = request.getEmailOrPhone().trim();
-        String channel = request.getChannel(); // "email" or "phone"
+        String channel = request.getChannel();
 
         if (otpAttemptService.isRequestBlocked(identifier)) {
             int remaining = otpAttemptService.getRemainingRequestCooldownMinutes(identifier);
@@ -149,7 +142,6 @@ public class UserService {
         otpAttemptService.recordRequest(identifier);
     }
 
-    // ─── SEND OTP (NEW SINGLE CHANNEL FLOW) ─────────────────────────────────────
     @Transactional
     public void sendOtp(SendOtpRequest request) {
         if (!"EMAIL".equalsIgnoreCase(request.getDeliveryType()) &&
@@ -167,12 +159,10 @@ public class UserService {
         otpService.generateAndSendOtp(user, request.getDeliveryType());
     }
 
-    // ─── LOGIN ─────────────────────────────────────────────────────────────────
     @Transactional
     public LoginResponse login(LoginRequest request) {
         String identifier = request.getEmailOrPhone().trim();
 
-        // Check Login lockouts
         if (loginAttemptService.isBlocked(identifier)) {
             int remainingCooldown = loginAttemptService.getRemainingCooldownMinutes(identifier);
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
@@ -190,7 +180,6 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        // Check verification & enabled state
         if (!Boolean.TRUE.equals(user.getIsActive()) || user.getStatus() == UserStatus.BANNED || user.getStatus() == UserStatus.SUSPENDED) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account disabled");
         }
@@ -201,11 +190,9 @@ public class UserService {
 
         loginAttemptService.loginSucceeded(identifier);
 
-        // Update last login
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        // Generate Access Token
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getRole().name(),
@@ -213,7 +200,6 @@ public class UserService {
                 jwtUtil.getPasswordVersion(user.getPassword())
         );
 
-        // Generate Refresh Token
         String refreshToken = UUID.randomUUID().toString();
         SessionEntity session = SessionEntity.builder()
                 .user(user)
@@ -225,7 +211,6 @@ public class UserService {
         return new LoginResponse(token, refreshToken, toDTO(user));
     }
 
-    // ─── REFRESH SESSION ────────────────────────────────────────────────────────
     @Transactional
     public LoginResponse refreshSession(String refreshToken) {
         SessionEntity session = sessionRepository.findByToken(refreshToken.trim())
@@ -238,7 +223,6 @@ public class UserService {
 
         User user = session.getUser();
 
-        // Invalidate current refresh token and roll to a new one
         sessionRepository.delete(session);
 
         String newAccessToken = jwtUtil.generateToken(
@@ -259,14 +243,12 @@ public class UserService {
         return new LoginResponse(newAccessToken, newRefreshToken, toDTO(user));
     }
 
-    // ─── LOGOUT ─────────────────────────────────────────────────────────────────
     @Transactional
     public void logout(String refreshToken) {
         sessionRepository.findByToken(refreshToken.trim())
                 .ifPresent(sessionRepository::delete);
     }
 
-    // ─── CHANGE PASSWORD ────────────────────────────────────────────────────────
     @Transactional
     public void changePassword(String email, ChangePasswordRequest request) {
         User user = userRepository.findByEmail(email)
@@ -283,11 +265,9 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Delete all active refresh tokens for the user
         sessionRepository.deleteByUserId(user.getId());
     }
 
-    // ─── FORGOT PASSWORD ───────────────────────────────────────────────────────
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         String identifier = request.getEmail().trim().toLowerCase();
@@ -307,7 +287,6 @@ public class UserService {
         }
     }
 
-    // ─── RESET PASSWORD ────────────────────────────────────────────────────────
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public void resetPassword(OtpResetPasswordRequest request) {
         String identifier = request.getEmailOrPhone().trim();
@@ -327,7 +306,6 @@ public class UserService {
             otpAttemptService.verificationFailed(identifier);
             
             if (otpAttemptService.isVerificationBlocked(identifier)) {
-                // Invalidate any active OTPs for this user
                 otpVerificationRepository.deleteByUser(user);
                 
                 int remaining = otpAttemptService.getRemainingVerificationCooldownMinutes(identifier);
@@ -340,13 +318,11 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Delete all active refresh tokens/sessions for the user
         sessionRepository.deleteByUserId(user.getId());
 
         otpAttemptService.verificationSucceeded(identifier);
     }
 
-    // ─── DEFAULT CATEGORIES ─────────────────────────────────────────────────────
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createDefaultCategories(User user) {
         List<Object[]> defaults = List.of(
@@ -377,7 +353,6 @@ public class UserService {
         categoryRepository.saveAll(entities);
     }
 
-    // ─── UPDATE PROFILE DETAILS ──────────────────────────────────────────────────
     @Transactional
     public UserDTO updateProfile(String email, UpdateProfileRequest request) {
         User user = userRepository.findByEmail(email)
@@ -392,7 +367,6 @@ public class UserService {
         return toDTO(user);
     }
 
-    // ─── HELPER ────────────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
@@ -411,7 +385,6 @@ public class UserService {
         budgetRepository.deleteByUser(user);
         categoryRepository.deleteByUser(user);
 
-        // Re-create default categories
         createDefaultCategories(user);
     }
 

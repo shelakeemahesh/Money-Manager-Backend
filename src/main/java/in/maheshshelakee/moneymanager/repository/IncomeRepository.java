@@ -21,7 +21,6 @@ public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
     @Query("SELECT COALESCE(SUM(i.amount), 0) FROM IncomeEntity i")
     Double sumAllIncomes();
 
-    // Added: per-user income sum for future dashboard use
     @Query("SELECT COALESCE(SUM(i.amount), 0) FROM IncomeEntity i WHERE i.user = :user")
     Double sumAmountByUser(@Param("user") User user);
 
