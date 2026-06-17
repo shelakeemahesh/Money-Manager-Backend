@@ -17,9 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.security.SecureRandom;
 
@@ -48,6 +50,9 @@ public class UserService {
 
     @Value("${app.otp-expiration-minutes:5}")
     private int otpExpirationMinutes;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
 
     @Transactional
     public UserDTO registerUser(UserDTO userDTO) {
@@ -386,6 +391,67 @@ public class UserService {
         categoryRepository.deleteByUser(user);
 
         createDefaultCategories(user);
+    }
+
+    @Transactional
+    public LoginResponse googleLogin(GoogleOAuthRequest request) {
+        String tokenInfoUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + request.getIdToken();
+        Map<String, Object> tokenInfo;
+        try {
+            tokenInfo = new RestTemplate().getForObject(tokenInfoUrl, Map.class);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google ID Token");
+        }
+
+        if (tokenInfo == null || tokenInfo.containsKey("error")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google ID Token");
+        }
+
+        String aud = (String) tokenInfo.get("aud");
+        if (!googleClientId.equals(aud)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token audience mismatch");
+        }
+
+        String email = ((String) tokenInfo.get("email")).trim().toLowerCase();
+        String name = (String) tokenInfo.get("name");
+        String picture = (String) tokenInfo.get("picture");
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = User.builder()
+                    .fullName(name)
+                    .email(email)
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .profileImage(picture)
+                    .isActive(true)
+                    .isVerified(true)
+                    .status(UserStatus.ACTIVE)
+                    .role(Role.USER)
+                    .build();
+            newUser = userRepository.save(newUser);
+            createDefaultCategories(newUser);
+            return newUser;
+        });
+
+        if (!Boolean.TRUE.equals(user.getIsActive()) || user.getStatus() == UserStatus.BANNED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account disabled");
+        }
+
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                user.getRole().name(),
+                user.getStatus().name(),
+                jwtUtil.getPasswordVersion(user.getPassword())
+        );
+
+        String refreshToken = UUID.randomUUID().toString();
+        SessionEntity session = SessionEntity.builder()
+                .user(user)
+                .token(refreshToken)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .build();
+        sessionRepository.save(session);
+
+        return new LoginResponse(token, refreshToken, toDTO(user));
     }
 
     public UserDTO toDTO(User entity) {

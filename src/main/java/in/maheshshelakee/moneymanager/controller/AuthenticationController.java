@@ -121,4 +121,10 @@ public class AuthenticationController {
         userService.wipeUserData(principal.getName());
         return ResponseEntity.ok(ApiResponse.success(null, "User transactional data wiped successfully!"));
     }
+
+    @PostMapping("/auth/google")
+    public ResponseEntity<ApiResponse<LoginResponse>> googleLogin(@Valid @RequestBody GoogleOAuthRequest request) {
+        LoginResponse response = userService.googleLogin(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }
