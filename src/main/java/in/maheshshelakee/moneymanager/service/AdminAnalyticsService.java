@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import in.maheshshelakee.moneymanager.entity.FriendExpense;
+import in.maheshshelakee.moneymanager.repository.FriendExpenseRepository;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ public class AdminAnalyticsService {
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
     private final UserSubscriptionRepository userSubscriptionRepository;
+    private final FriendExpenseRepository friendExpenseRepository;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getAnalytics(LocalDate fromDate, LocalDate toDate) {
@@ -36,14 +39,16 @@ public class AdminAnalyticsService {
         List<User> allUsers = userRepository.findAll();
         List<ExpenseEntity> allExpenses = expenseRepository.findAll();
         List<IncomeEntity> allIncomes = incomeRepository.findAll();
+        List<FriendExpense> allFriendExpenses = friendExpenseRepository.findAll();
         List<UserSubscriptionEntity> allSubscriptions = userSubscriptionRepository.findAll();
 
         long totalUsers = allUsers.size();
 
         // Total Transactions Count & Volume
-        long totalTransactionsCount = allExpenses.size() + allIncomes.size();
+        long totalTransactionsCount = allExpenses.size() + allIncomes.size() + allFriendExpenses.size();
         double totalVolume = allExpenses.stream().mapToDouble(ExpenseEntity::getAmount).sum()
-                + allIncomes.stream().mapToDouble(IncomeEntity::getAmount).sum();
+                + allIncomes.stream().mapToDouble(IncomeEntity::getAmount).sum()
+                + allFriendExpenses.stream().mapToDouble(FriendExpense::getAmount).sum();
 
         // Platform Revenue Dynamic Calculation based on active user subscriptions in DB:
         double totalPlatformRevenue = allSubscriptions.stream()
@@ -60,6 +65,9 @@ public class AdminAnalyticsService {
         allIncomes.stream()
                 .filter(i -> i.getDate() != null && !i.getDate().isBefore(mauThreshold))
                 .forEach(i -> activeUserIds.add(i.getUser().getId()));
+        allFriendExpenses.stream()
+                .filter(fe -> !fe.getExpenseDate().isBefore(mauThreshold))
+                .forEach(fe -> activeUserIds.add(fe.getUser().getId()));
         long mau = activeUserIds.size();
         if (mau == 0) {
             mau = allUsers.stream().filter(u -> u.getStatus() == UserStatus.ACTIVE).count();
@@ -118,6 +126,12 @@ public class AdminAnalyticsService {
                         Collectors.summingDouble(ExpenseEntity::getAmount)
                 ));
 
+        allFriendExpenses.stream()
+                .filter(fe -> !fe.getExpenseDate().isBefore(start) && !fe.getExpenseDate().isAfter(end))
+                .forEach(fe -> {
+                    categorySums.merge(fe.getCategory(), fe.getAmount(), Double::sum);
+                });
+
         List<Map<String, Object>> expenseCategories = categorySums.entrySet().stream()
                 .map(entry -> {
                     Map<String, Object> map = new HashMap<>();
@@ -136,6 +150,10 @@ public class AdminAnalyticsService {
         double rangeExpense = allExpenses.stream()
                 .filter(e -> !e.getExpenseDate().isBefore(start) && !e.getExpenseDate().isAfter(end))
                 .mapToDouble(ExpenseEntity::getAmount)
+                .sum()
+                + allFriendExpenses.stream()
+                .filter(fe -> !fe.getExpenseDate().isBefore(start) && !fe.getExpenseDate().isAfter(end))
+                .mapToDouble(FriendExpense::getAmount)
                 .sum();
 
         List<Map<String, Object>> incomeVsExpense = List.of(

@@ -67,32 +67,32 @@ public class OtpService {
         if ("RESET".equalsIgnoreCase(purpose)) {
             subject = "Reset Password Code";
             body = "Hi " + user.getFullName() + ",\n\n"
-                    + "You requested to reset your Money Manager password.\n\n"
+                    + "You requested to reset your CredoWallet password.\n\n"
                     + "Your 6-digit reset OTP code is:\n"
                     + rawOtp + "\n\n"
                     + "This OTP will expire in " + otpExpirationMinutes + " minutes.\n\n"
-                    + "– Money Manager Team";
+                    + "– CredoWallet Team";
         } else {
-            subject = "Verify your Money Manager account";
+            subject = "Verify your CredoWallet account";
             body = "Hi " + user.getFullName() + ",\n\n"
                     + "Your 6-digit OTP verification code is:\n"
                     + rawOtp + "\n\n"
                     + "This OTP will expire in " + otpExpirationMinutes + " minutes.\n\n"
-                    + "– Money Manager Team";
+                    + "– CredoWallet Team";
         }
 
         if ("phone".equalsIgnoreCase(deliveryType)) {
             if ("RESET".equalsIgnoreCase(purpose)) {
-                smsService.sendSms(user.getPhoneNumber(), "Your Money Manager password reset OTP is " + rawOtp);
+                smsService.sendSms(user.getPhoneNumber(), "Your CredoWallet password reset OTP is " + rawOtp);
             } else {
-                smsService.sendSms(user.getPhoneNumber(), "Your Money Manager verification OTP is " + rawOtp);
+                smsService.sendSms(user.getPhoneNumber(), "Your CredoWallet verification OTP is " + rawOtp);
             }
         } else if ("both".equalsIgnoreCase(deliveryType)) {
             emailService.sendEmail(user.getEmail(), subject, body);
             if ("RESET".equalsIgnoreCase(purpose)) {
-                smsService.sendSms(user.getPhoneNumber(), "Your Money Manager password reset OTP is " + rawOtp);
+                smsService.sendSms(user.getPhoneNumber(), "Your CredoWallet password reset OTP is " + rawOtp);
             } else {
-                smsService.sendSms(user.getPhoneNumber(), "Your Money Manager verification OTP is " + rawOtp);
+                smsService.sendSms(user.getPhoneNumber(), "Your CredoWallet verification OTP is " + rawOtp);
             }
         } else {
             emailService.sendEmail(user.getEmail(), subject, body);
@@ -141,7 +141,7 @@ public class OtpService {
         otpRepo.save(otp);
 
         // Send to ONLY chosen channel
-        String subject = "Verify your Money Manager account";
+        String subject = "Verify your CredoWallet account";
         String body = "Your OTP is: " + rawOtp + "\nExpires in 10 minutes.";
 
         if ("EMAIL".equalsIgnoreCase(deliveryType)) {
@@ -149,7 +149,7 @@ public class OtpService {
             emailService.sendEmail(user.getEmail(), subject, body);
         } else if ("SMS".equalsIgnoreCase(deliveryType)) {
             log.info("Sending OTP via SMS to {}", user.getPhoneNumber());
-            smsService.sendSms(user.getPhoneNumber(), "Your Money Manager OTP is " + rawOtp);
+            smsService.sendSms(user.getPhoneNumber(), "Your CredoWallet OTP is " + rawOtp);
         }
     }
 

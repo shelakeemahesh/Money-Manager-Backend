@@ -4,8 +4,10 @@ import in.maheshshelakee.moneymanager.dto.PaginatedTransactionsResponse;
 import in.maheshshelakee.moneymanager.dto.TransactionDto;
 import in.maheshshelakee.moneymanager.entity.ExpenseEntity;
 import in.maheshshelakee.moneymanager.entity.IncomeEntity;
+import in.maheshshelakee.moneymanager.entity.FriendExpense;
 import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
+import in.maheshshelakee.moneymanager.repository.FriendExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public class AdminTransactionService {
 
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
+    private final FriendExpenseRepository friendExpenseRepository;
 
     @Transactional(readOnly = true)
     public PaginatedTransactionsResponse getAllTransactions(
@@ -51,6 +54,25 @@ public class AdminTransactionService {
                         .userId(e.getUser().getId())
                         .userName(e.getUser().getFullName())
                         .userEmail(e.getUser().getEmail())
+                        .build());
+            }
+
+            List<FriendExpense> friendExpenses = friendExpenseRepository.findAll();
+            for (FriendExpense fe : friendExpenses) {
+                boolean flagged = fe.getAmount() > 50000;
+                combined.add(TransactionDto.builder()
+                        .id(fe.getId())
+                        .type("EXPENSE")
+                        .title("Spend on: " + fe.getFriendName())
+                        .amount(fe.getAmount())
+                        .category(fe.getCategory())
+                        .note(fe.getDescription() != null && !fe.getDescription().isBlank() ? fe.getDescription() : "Spent on friend: " + fe.getFriendName())
+                        .date(fe.getExpenseDate())
+                        .paymentMethod("Friend Outflow")
+                        .flagged(flagged)
+                        .userId(fe.getUser().getId())
+                        .userName(fe.getUser().getFullName())
+                        .userEmail(fe.getUser().getEmail())
                         .build());
             }
         }

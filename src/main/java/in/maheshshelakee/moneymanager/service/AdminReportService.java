@@ -6,11 +6,13 @@ import com.lowagie.text.pdf.*;
 import in.maheshshelakee.moneymanager.entity.ReportEntity;
 import in.maheshshelakee.moneymanager.entity.IncomeEntity;
 import in.maheshshelakee.moneymanager.entity.ExpenseEntity;
+import in.maheshshelakee.moneymanager.entity.FriendExpense;
 import in.maheshshelakee.moneymanager.entity.User;
 import in.maheshshelakee.moneymanager.entity.BudgetEntity;
 import in.maheshshelakee.moneymanager.repository.ReportRepository;
 import in.maheshshelakee.moneymanager.repository.IncomeRepository;
 import in.maheshshelakee.moneymanager.repository.ExpenseRepository;
+import in.maheshshelakee.moneymanager.repository.FriendExpenseRepository;
 import in.maheshshelakee.moneymanager.repository.UserRepository;
 import in.maheshshelakee.moneymanager.repository.BudgetRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class AdminReportService {
     private final ReportRepository reportRepository;
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
+    private final FriendExpenseRepository friendExpenseRepository;
     private final UserRepository userRepository;
     private final BudgetRepository budgetRepository;
 
@@ -138,6 +141,18 @@ public class AdminReportService {
                         exp.getExpenseDate().toString(), exp.getTitle(), exp.getFlagged() ? "YES" : "NO",
                         exp.getPaymentMethod(), exp.getNote() != null ? exp.getNote().replace(",", " ") : ""));
             }
+
+            // Friend Expenses
+            List<FriendExpense> friendExpenses = friendExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(start, end);
+            for (FriendExpense fe : friendExpenses) {
+                if (userId != null && !fe.getUser().getId().equals(userId)) continue;
+                if (category != null && !category.isEmpty() && !fe.getCategory().equalsIgnoreCase(category)) continue;
+                
+                writer.write(String.format("%d,OUTFLOW,%s,%.2f,%s,%s,%s,%s,Friend Outflow,%s\n",
+                        fe.getId(), fe.getUser().getEmail(), fe.getAmount(), fe.getCategory(),
+                        fe.getExpenseDate().toString(), "Spend on: " + fe.getFriendName(), fe.getAmount() > 50000 ? "YES" : "NO",
+                        fe.getDescription() != null ? fe.getDescription().replace(",", " ") : ""));
+            }
         } 
         else if (type.equalsIgnoreCase("USER_ACTIVITY")) {
             writer.write("User ID,Full Name,Email,Role,Status,Verified,Join Date\n");
@@ -197,7 +212,7 @@ public class AdminReportService {
         Font subFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.GRAY);
         Font boldText = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.DARK_GRAY);
         
-        Paragraph title = new Paragraph("MONEY MANAGER ADMIN: SYSTEM AUDIT", titleFont);
+        Paragraph title = new Paragraph("CREDOWALLET ADMIN: SYSTEM AUDIT", titleFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
@@ -210,13 +225,17 @@ public class AdminReportService {
         if (type.equalsIgnoreCase("FINANCIAL_SUMMARY")) {
             List<IncomeEntity> incomes = incomeRepository.findByDateBetweenOrderByDateDesc(start, end);
             List<ExpenseEntity> expenses = expenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(start, end);
+            List<FriendExpense> friendExpenses = friendExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(start, end);
             
             double totalIn = incomes.stream()
                     .filter(i -> userId == null || i.getUser().getId().equals(userId))
                     .mapToDouble(IncomeEntity::getAmount).sum();
             double totalOut = expenses.stream()
                     .filter(e -> userId == null || e.getUser().getId().equals(userId))
-                    .mapToDouble(ExpenseEntity::getAmount).sum();
+                    .mapToDouble(ExpenseEntity::getAmount).sum()
+                    + friendExpenses.stream()
+                    .filter(fe -> userId == null || fe.getUser().getId().equals(userId))
+                    .mapToDouble(FriendExpense::getAmount).sum();
             double netSavings = totalIn - totalOut;
 
             PdfPTable kpiTable = new PdfPTable(3);
@@ -263,6 +282,19 @@ public class AdminReportService {
                 dataTable.addCell(createTableCell("₹" + String.format("%,.0f", exp.getAmount())));
                 dataTable.addCell(createTableCell(exp.getExpenseDate().toString()));
                 dataTable.addCell(createTableCell(exp.getFlagged() ? "Anomaly" : "Clear", exp.getFlagged() ? Color.RED : Color.DARK_GRAY));
+            }
+
+            List<FriendExpense> friendExpenses = friendExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateDesc(start, end);
+            for (FriendExpense fe : friendExpenses) {
+                if (userId != null && !fe.getUser().getId().equals(userId)) continue;
+                if (category != null && !category.isEmpty() && !fe.getCategory().equalsIgnoreCase(category)) continue;
+                
+                dataTable.addCell(createTableCell("Outflow", Color.decode("#f97316")));
+                dataTable.addCell(createTableCell(fe.getUser().getEmail()));
+                dataTable.addCell(createTableCell(fe.getCategory()));
+                dataTable.addCell(createTableCell("₹" + String.format("%,.0f", fe.getAmount())));
+                dataTable.addCell(createTableCell(fe.getExpenseDate().toString()));
+                dataTable.addCell(createTableCell(fe.getAmount() > 50000 ? "Anomaly" : "Clear", fe.getAmount() > 50000 ? Color.RED : Color.DARK_GRAY));
             }
         } 
         else if (type.equalsIgnoreCase("USER_ACTIVITY")) {
@@ -312,7 +344,7 @@ public class AdminReportService {
         document.add(dataTable);
         
         // Footer signature
-        Paragraph footer = new Paragraph("\nReport generated automatically via Money Manager Core. Authenticated by " + writer.getClass().getSimpleName(), subFont);
+        Paragraph footer = new Paragraph("\nReport generated automatically via CredoWallet Core. Authenticated by " + writer.getClass().getSimpleName(), subFont);
         footer.setAlignment(Element.ALIGN_RIGHT);
         document.add(footer);
         

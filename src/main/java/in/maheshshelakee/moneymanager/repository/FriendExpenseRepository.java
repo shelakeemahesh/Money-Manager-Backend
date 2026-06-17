@@ -18,4 +18,7 @@ public interface FriendExpenseRepository extends JpaRepository<FriendExpense, Lo
     
     @Query("SELECT fe.category, SUM(fe.amount) FROM FriendExpense fe WHERE fe.user = :user GROUP BY fe.category")
     List<Object[]> getCategorySpendBreakdown(@Param("user") User user);
+
+    List<FriendExpense> findByExpenseDateBetweenOrderByExpenseDateDesc(java.time.LocalDate start, java.time.LocalDate end);
 }
+
