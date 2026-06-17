@@ -99,7 +99,7 @@ public class OtpService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public void verifyOtp(User user, String submittedCode) {
         String hashedCode = hashToken(submittedCode.trim());
         OtpVerification otp = otpRepo
