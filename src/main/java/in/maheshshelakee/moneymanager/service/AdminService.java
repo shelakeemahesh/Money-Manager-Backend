@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 @Slf4j
 @Service
@@ -29,6 +30,7 @@ public class AdminService {
     private final ExpenseRepository expenseRepository;
     private final AdminAuditLogRepository adminAuditLogRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager entityManager;
 
     public AdminDashboardResponse getDashboardStats() {
         long totalUsers = userRepository.count();
@@ -98,6 +100,26 @@ public class AdminService {
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Cascade delete dependent entities via native queries
+        entityManager.createNativeQuery("DELETE FROM tbl_subcategories WHERE category_id IN (SELECT id FROM tbl_categories WHERE user_id = :userId)").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_categories WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_expenses WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_incomes WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_friend_expenses WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_budgets WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_sessions WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_password_resets WHERE email = (SELECT email FROM tbl_users WHERE id = :userId)").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_user_subscriptions WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_notifications WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_user_feedbacks WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_ticket_replies WHERE ticket_id IN (SELECT id FROM tbl_support_tickets WHERE user_id = :userId)").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_support_tickets WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM otp_verifications WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM fraud_events WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_payment_history WHERE user_id = :userId").setParameter("userId", userId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM tbl_admin_audit_logs WHERE admin_id = :userId OR target_user_id = :userId").setParameter("userId", userId).executeUpdate();
+
         userRepository.delete(user);
     }
 
