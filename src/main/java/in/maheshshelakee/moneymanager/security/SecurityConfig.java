@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 "/register",
                                 "/send-otp",
                                 "/login",
+                                "/auth/google",
                                 "/verify-otp",
                                 "/resend-otp",
                                 "/refresh-token",
