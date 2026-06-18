@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.*;
@@ -70,6 +71,7 @@ public class AdminReportService {
     /**
      * Trigger manual report generation
      */
+    @Transactional
     public ReportEntity triggerReportGeneration(String type, String fromDate, String toDate, Long userId, String category, String format, String adminEmail) {
         // 1. Create PENDING report record
         String extension = format.toUpperCase().equals("PDF") ? ".pdf" : ".csv";

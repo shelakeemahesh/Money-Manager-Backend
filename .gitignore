@@ -34,3 +34,5 @@ build/
 .DS_Store
 .env
 backups/
+reports_archive/
+
