@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.FORWARD).permitAll()
                         .requestMatchers(
                                 "/register",
                                 "/send-otp",
@@ -56,6 +57,7 @@ public class SecurityConfig {
                                 "/reset-password",
                                 "/status",
                                 "/health",
+                                "/error",
                                 "/ws-support/**")
                         .permitAll()
                         .requestMatchers("/admin/support/**").hasAnyRole("ADMIN", "SUPPORT")
