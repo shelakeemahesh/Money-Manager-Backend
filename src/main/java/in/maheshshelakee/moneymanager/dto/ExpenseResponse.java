@@ -20,7 +20,7 @@ public class ExpenseResponse {
     private Double amount;
     private String category;
     private String note;
-    private LocalDate expenseDate;
+    private LocalDate date;
     private String paymentMethod;
     private String icon;
     private LocalDateTime createdAt;

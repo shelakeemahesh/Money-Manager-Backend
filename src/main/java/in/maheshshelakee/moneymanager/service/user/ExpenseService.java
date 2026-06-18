@@ -118,7 +118,7 @@ public class ExpenseService {
                 .amount(entity.getAmount())
                 .category(entity.getCategory())
                 .note(entity.getNote())
-                .expenseDate(entity.getExpenseDate())
+                .date(entity.getExpenseDate())
                 .paymentMethod(entity.getPaymentMethod())
                 .icon(entity.getIcon())
                 .createdAt(entity.getCreatedAt())
