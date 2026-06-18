@@ -41,7 +41,7 @@ public class DataRetentionService {
     }
 
     // Scheduled retention check (Runs daily at 1:00 AM)
-    @Scheduled(cron = "0 0 1 * * ?")
+    // @Scheduled(cron = "0 0 1 * * ?")
     @Transactional
     public void runDataRetentionPurge() {
         RetentionSettings settings = getSettings();
