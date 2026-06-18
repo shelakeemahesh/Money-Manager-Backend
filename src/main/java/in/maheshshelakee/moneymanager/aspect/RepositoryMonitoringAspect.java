@@ -1,6 +1,6 @@
 package in.maheshshelakee.moneymanager.aspect;
 
-import in.maheshshelakee.moneymanager.service.SystemMonitoringService;
+import in.maheshshelakee.moneymanager.service.admin.SystemMonitoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;

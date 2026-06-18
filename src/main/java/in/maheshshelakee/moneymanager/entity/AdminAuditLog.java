@@ -1,5 +1,7 @@
 package in.maheshshelakee.moneymanager.entity;
 
+import in.maheshshelakee.moneymanager.service.admin.AdminAuditService;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

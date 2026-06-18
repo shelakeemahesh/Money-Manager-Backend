@@ -1,6 +1,6 @@
 package in.maheshshelakee.moneymanager.security;
 
-import in.maheshshelakee.moneymanager.service.SystemMonitoringService;
+import in.maheshshelakee.moneymanager.service.admin.SystemMonitoringService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
