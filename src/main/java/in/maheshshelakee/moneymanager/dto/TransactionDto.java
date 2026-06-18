@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class TransactionDto {
     private Long id;
+    private String formattedTxId;
     private String type; // INCOME / EXPENSE
     private String title;
     private Double amount;

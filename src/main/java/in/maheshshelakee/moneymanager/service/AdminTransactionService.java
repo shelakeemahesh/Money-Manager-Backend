@@ -43,6 +43,7 @@ public class AdminTransactionService {
 
                 combined.add(TransactionDto.builder()
                         .id(e.getId())
+                        .formattedTxId(e.getUser().getId() + "-007-" + String.format("%03d", e.getId()))
                         .type("EXPENSE")
                         .title(e.getTitle())
                         .amount(e.getAmount())
@@ -62,6 +63,7 @@ public class AdminTransactionService {
                 boolean flagged = fe.getAmount() > 50000;
                 combined.add(TransactionDto.builder()
                         .id(fe.getId())
+                        .formattedTxId(fe.getUser().getId() + "-005-" + String.format("%03d", fe.getId()))
                         .type("EXPENSE")
                         .title("Spend on: " + fe.getFriendName())
                         .amount(fe.getAmount())
@@ -87,6 +89,7 @@ public class AdminTransactionService {
 
                 combined.add(TransactionDto.builder()
                         .id(i.getId())
+                        .formattedTxId(i.getUser().getId() + "-006-" + String.format("%03d", i.getId()))
                         .type("INCOME")
                         .title(i.getSource())
                         .amount(i.getAmount())
