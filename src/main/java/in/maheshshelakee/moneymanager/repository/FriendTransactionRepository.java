@@ -15,7 +15,7 @@ public interface FriendTransactionRepository extends JpaRepository<FriendTransac
 
     @Query("SELECT ft FROM FriendTransaction ft WHERE " +
             "(ft.user = :user OR (ft.user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com') " +
-            "AND :user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com'))) " +
+            "AND (SELECT u2.email FROM User u2 WHERE u2 = :user) IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com'))) " +
             "AND (:type IS NULL OR ft.type = :type) " +
             "AND (:status IS NULL OR ft.status = :status) " +
             "AND (:friendName IS NULL OR :friendName = '' OR LOWER(ft.friendName) LIKE LOWER(CONCAT('%', :friendName, '%'))) " +
@@ -30,7 +30,7 @@ public interface FriendTransactionRepository extends JpaRepository<FriendTransac
             "FROM FriendTransaction ft " +
             "WHERE ft.user = :user " +
             "OR (ft.user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com') " +
-            "AND :user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
+            "AND (SELECT u2.email FROM User u2 WHERE u2 = :user) IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
             "GROUP BY ft.friendName, ft.type")
     List<Object[]> getFriendBalancesRaw(@Param("user") User user);
 }

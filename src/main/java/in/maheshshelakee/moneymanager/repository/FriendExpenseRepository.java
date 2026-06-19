@@ -13,19 +13,19 @@ import java.util.List;
 public interface FriendExpenseRepository extends JpaRepository<FriendExpense, Long> {
     @Query("SELECT fe FROM FriendExpense fe WHERE " +
            "(fe.user = :user OR (fe.user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com') " +
-           "AND :user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com'))) " +
+           "AND (SELECT u2.email FROM User u2 WHERE u2 = :user) IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com'))) " +
            "ORDER BY fe.expenseDate DESC")
     List<FriendExpense> findByUserOrderByExpenseDateDesc(@Param("user") User user);
     
     @Query("SELECT fe.friendName, SUM(fe.amount) FROM FriendExpense fe " +
            "WHERE fe.user = :user OR (fe.user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com') " +
-           "AND :user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
+           "AND (SELECT u2.email FROM User u2 WHERE u2 = :user) IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
            "GROUP BY fe.friendName ORDER BY SUM(fe.amount) DESC")
     List<Object[]> getFriendSpendBreakdown(@Param("user") User user);
     
     @Query("SELECT fe.category, SUM(fe.amount) FROM FriendExpense fe " +
            "WHERE fe.user = :user OR (fe.user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com') " +
-           "AND :user.email IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
+           "AND (SELECT u2.email FROM User u2 WHERE u2 = :user) IN ('shelakemahesh024@gmail.com', 'shelakemahesh91@gmail.com')) " +
            "GROUP BY fe.category")
     List<Object[]> getCategorySpendBreakdown(@Param("user") User user);
 
