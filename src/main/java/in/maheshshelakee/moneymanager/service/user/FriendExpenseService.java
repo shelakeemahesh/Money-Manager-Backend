@@ -58,7 +58,7 @@ public class FriendExpenseService {
         FriendExpense expense = friendExpenseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Record not found"));
 
-        if (!expense.getUser().getId().equals(user.getId())) {
+        if (!isOwnerOrShared(expense.getUser(), user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
@@ -80,7 +80,7 @@ public class FriendExpenseService {
         FriendExpense expense = friendExpenseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Record not found"));
 
-        if (!expense.getUser().getId().equals(user.getId())) {
+        if (!isOwnerOrShared(expense.getUser(), user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
@@ -116,5 +116,15 @@ public class FriendExpenseService {
                 .description(expense.getDescription())
                 .expenseDate(expense.getExpenseDate())
                 .build();
+    }
+
+    private boolean isOwnerOrShared(User owner, User currentUser) {
+        if (owner.getId().equals(currentUser.getId())) {
+            return true;
+        }
+        String ownerEmail = owner.getEmail();
+        String currentEmail = currentUser.getEmail();
+        return (ownerEmail.equals("shelakemahesh024@gmail.com") || ownerEmail.equals("shelakemahesh91@gmail.com"))
+                && (currentEmail.equals("shelakemahesh024@gmail.com") || currentEmail.equals("shelakemahesh91@gmail.com"));
     }
 }
