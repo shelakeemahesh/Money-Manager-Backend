@@ -16,6 +16,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import java.io.File;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +41,31 @@ public class AdminBackupController {
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<BackupHistory>>> getHistory() {
         return ResponseEntity.ok(ApiResponse.success(backupRecoveryService.getBackupHistory()));
+    }
+
+    @GetMapping("/download/{id}")
+    public ResponseEntity<Resource> downloadBackup(@PathVariable Long id) {
+        BackupHistory history = backupRecoveryService.getBackupHistory().stream()
+                .filter(h -> h.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Backup record not found."));
+
+        if (!"SUCCESS".equals(history.getStatus())) {
+            throw new IllegalArgumentException("Cannot download a failed backup.");
+        }
+
+        File file = new File(history.getFilePathOrUrl());
+        if (!file.exists()) {
+            throw new IllegalArgumentException("Backup file does not exist on the server.");
+        }
+
+        Resource resource = new FileSystemResource(file);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(file.length())
+                .body(resource);
     }
 
     @PostMapping("/trigger")

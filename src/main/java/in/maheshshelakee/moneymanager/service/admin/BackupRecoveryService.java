@@ -160,7 +160,20 @@ public class BackupRecoveryService {
                 // Delete local file if backing up strictly to S3
                 outputFile.delete();
             } catch (Exception e) {
-                log.error("Failed to upload dump file to AWS S3. Falling back to local copy.", e);
+                log.error("Failed to upload dump file to AWS S3.", e);
+                if (outputFile.exists()) {
+                    outputFile.delete();
+                }
+                BackupHistory history = BackupHistory.builder()
+                        .timestamp(LocalDateTime.now())
+                        .size(0L)
+                        .type(type)
+                        .status("FAILED")
+                        .storageDestination(settings.getStorageDestination())
+                        .fileName(fileName)
+                        .filePathOrUrl("")
+                        .build();
+                return historyRepository.save(history);
             }
         }
 
