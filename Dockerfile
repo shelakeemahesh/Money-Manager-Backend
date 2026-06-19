@@ -28,6 +28,7 @@ EXPOSE ${PORT:-8080}
 # JVM tuning for containerised workloads (optimised for Render 512MB memory limit):
 #   -XX:+UseContainerSupport     — respect cgroup memory/CPU limits
 #   -XX:+UseSerialGC             — low-overhead GC to save native memory
+#   -XX:TieredStopAtLevel=1      — stop at JIT level 1 to compile much faster on startup
 #   -Xmx256m                     — strict limit of 256MB heap
 #   -Xss256k                     — reduce thread stack size to save RAM
 #   -Djava.security.egd          — faster SecureRandom (avoids /dev/random blocking)
@@ -35,6 +36,7 @@ EXPOSE ${PORT:-8080}
 CMD ["sh", "-c", "java \
   -XX:+UseContainerSupport \
   -XX:+UseSerialGC \
+  -XX:TieredStopAtLevel=1 \
   -Xmx256m \
   -Xss256k \
   -Djava.security.egd=file:/dev/./urandom \
