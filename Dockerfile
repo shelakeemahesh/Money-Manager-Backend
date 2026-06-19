@@ -25,14 +25,18 @@ COPY --from=builder /build/target/moneymanager-0.0.1-SNAPSHOT.jar app.jar
 # Render injects PORT env var; expose it for documentation
 EXPOSE ${PORT:-8080}
 
-# JVM tuning for containerised workloads:
+# JVM tuning for containerised workloads (optimised for Render 512MB memory limit):
 #   -XX:+UseContainerSupport     — respect cgroup memory/CPU limits
-#   -XX:MaxRAMPercentage=75.0    — use up to 75% of container RAM for heap
+#   -XX:+UseSerialGC             — low-overhead GC to save native memory
+#   -Xmx256m                     — strict limit of 256MB heap
+#   -Xss256k                     — reduce thread stack size to save RAM
 #   -Djava.security.egd          — faster SecureRandom (avoids /dev/random blocking)
 #   -Dspring.jmx.enabled=false   — skip JMX (not useful in containers)
 CMD ["sh", "-c", "java \
   -XX:+UseContainerSupport \
-  -XX:MaxRAMPercentage=75.0 \
+  -XX:+UseSerialGC \
+  -Xmx256m \
+  -Xss256k \
   -Djava.security.egd=file:/dev/./urandom \
   -Dspring.jmx.enabled=false \
   -jar app.jar \
