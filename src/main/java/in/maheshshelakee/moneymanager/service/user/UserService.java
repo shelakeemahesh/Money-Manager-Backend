@@ -164,7 +164,10 @@ public class UserService {
         otpService.generateAndSendOtp(user, request.getDeliveryType());
     }
 
-    @Transactional
+    // NOTE: No @Transactional here — BCrypt password verification is CPU-bound
+    // (300-1500ms on Render 0.1 vCPU) and should NOT hold a DB connection from the
+    // limited HikariCP pool (max 10) during that time. Each DB operation below
+    // (findByEmail, save lastLogin, save session) is individually atomic.
     public LoginResponse login(LoginRequest request) {
         String identifier = request.getEmailOrPhone().trim();
 
