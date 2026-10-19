@@ -31,6 +31,7 @@ public class JwtUtil {
     private long expirationMs;
 
     private Key signingKey;
+    private JwtParser jwtParser;
 
     /**
      * Fail-fast validation — if the secret is too short or expiration is invalid,
@@ -59,8 +60,9 @@ public class JwtUtil {
                     "JWT expiration (app.jwt.expiration-ms) must be positive, got: " + expirationMs);
         }
 
-        // Pre-compute the signing key once (immutable after init)
+        // Pre-compute the signing key and parser once (immutable after init)
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        this.jwtParser = Jwts.parserBuilder().setSigningKey(signingKey).build();
 
         log.info("JwtUtil initialized — secret length: {} bytes, expiration: {} ms",
                 keyBytes.length, expirationMs);
@@ -125,12 +127,10 @@ public class JwtUtil {
     }
 
     /**
-     * Single parsing method — avoids recreating the parser on every call.
+     * Single parsing method — uses the pre-computed parser (no per-call allocation).
      */
     private Claims extractClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(signingKey)
-                .build()
+        return jwtParser
                 .parseClaimsJws(token)
                 .getBody();
     }

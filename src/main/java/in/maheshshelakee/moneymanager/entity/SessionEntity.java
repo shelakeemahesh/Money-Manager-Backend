@@ -6,7 +6,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_sessions")
+@Table(name = "tbl_sessions", indexes = {
+        @Index(name = "idx_session_token", columnList = "token")
+})
 @Getter
 @Setter
 @Builder
