@@ -58,6 +58,7 @@ public class SecurityConfig {
                                 "/status",
                                 "/health",
                                 "/error",
+                                "/actuator/**",
                                 "/ws-support/**")
                         .permitAll()
                         .requestMatchers("/admin/support/**").hasAnyRole("ADMIN", "SUPPORT")
