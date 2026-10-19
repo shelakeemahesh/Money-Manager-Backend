@@ -130,38 +130,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                 } catch (Exception ex) {
                     log.warn("Drop legacy admin_id profile FK constraint failed: " + ex.getMessage());
                 }
-                try {
-                    stmt.execute("ALTER TABLE tbl_expenses DROP CONSTRAINT IF EXISTS fkb9dn15oqmjwntdh96pvgsls6l");
-                    stmt.execute("ALTER TABLE tbl_expenses DROP COLUMN IF EXISTS profile_id");
-                } catch (Exception ex) {
-                    log.warn("Clean tbl_expenses legacy profile_id failed: " + ex.getMessage());
-                }
-                try {
-                    stmt.execute("ALTER TABLE tbl_incomes DROP CONSTRAINT IF EXISTS fkoe2tb8guovgwn0goavk5xmep0");
-                    stmt.execute("ALTER TABLE tbl_incomes DROP COLUMN IF EXISTS profile_id");
-                } catch (Exception ex) {
-                    log.warn("Clean tbl_incomes legacy profile_id failed: " + ex.getMessage());
-                }
-                try {
-                    stmt.execute("ALTER TABLE tbl_categories DROP CONSTRAINT IF EXISTS fkriip3m5423be58jfm33c0q8qb");
-                    stmt.execute("ALTER TABLE tbl_categories DROP CONSTRAINT IF EXISTS ukpv5mcfe0s23yqkm63migdfwo2");
-                    stmt.execute("ALTER TABLE tbl_categories DROP COLUMN IF EXISTS profile_id");
-                } catch (Exception ex) {
-                    log.warn("Clean tbl_categories legacy profile_id failed: " + ex.getMessage());
-                }
-                try {
-                    stmt.execute("DROP TABLE IF EXISTS tbl_profiles");
-                } catch (Exception ex) {
-                    log.warn("Drop tbl_profiles failed: " + ex.getMessage());
-                }
             }
             stmt.execute("UPDATE tbl_users SET role = 'ADMIN' WHERE role = 'SUPERADMIN'");
-            log.info("Successfully relaxed tbl_users column constraints, dropped legacy FKs, and migrated SUPERADMIN to ADMIN.");
+            log.info("Successfully verified tbl_users column constraints.");
         } catch (Exception e) {
-            log.warn("Database alter/migration log (non-fatal): " + e.getMessage());
+            log.warn("Database column check (non-fatal): " + e.getMessage());
         }
 
-        // Seed regular Admin if none exists, or ensure its credentials are correct
+        // Seed regular Admin ONLY if none exists (never overwrite existing admin data or passwords)
         String adminEmail = "shelakemahesh024@gmail.com";
         User admin = userRepository.findByEmail(adminEmail).orElse(null);
         if (admin == null) {
@@ -176,16 +152,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isVerified(true)
                     .build();
             userRepository.save(admin);
-            log.info("Seeded admin: email={}, password=Mahesh@3459", adminEmail);
+            log.info("Seeded initial admin account: email={}", adminEmail);
         } else {
-            // Force reset credentials to Mahesh@3459 and ensure ADMIN status is active/verified
-            admin.setPassword(passwordEncoder.encode("Mahesh@3459"));
-            admin.setRole(Role.ADMIN);
-            admin.setStatus(UserStatus.ACTIVE);
-            admin.setIsActive(true);
-            admin.setIsVerified(true);
-            userRepository.save(admin);
-            log.info("Forced update of admin credentials and activation status in database.");
+            log.info("Admin account exists. Retaining all existing data and credentials without modification.");
         }
 
         // Seed Default AI Settings
